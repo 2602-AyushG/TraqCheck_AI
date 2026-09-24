@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import "./App.css";
 
 import {
   uploadResume,
@@ -7,6 +8,22 @@ import {
   requestDocuments,
   submitDocuments,
 } from "./api.js";
+
+const STATUS_LABELS = {
+  parsed: "Parsed",
+  documents_requested: "Documents requested",
+  documents_submitted: "Documents submitted",
+  parse_failed: "Parse failed",
+};
+
+function StatusBadge({ status }) {
+  const known = STATUS_LABELS[status];
+  return (
+    <span className={`badge badge-${known ? status : "default"}`}>
+      {known || status || "Unknown"}
+    </span>
+  );
+}
 
 function App() {
   const [candidates, setCandidates] = useState([]);
@@ -69,11 +86,7 @@ function App() {
       return;
     }
 
-    await submitDocuments(
-      selectedId,
-      panFile,
-      aadhaarFile
-    );
+    await submitDocuments(selectedId, panFile, aadhaarFile);
 
     setPanFile(null);
     setAadhaarFile(null);
@@ -83,179 +96,219 @@ function App() {
   };
 
   return (
-    <div
-      style={{
-        padding: "2rem",
-        fontFamily: "Arial, sans-serif",
-      }}
-    >
-      <h1>Candidate AI System</h1>
+    <div className="app">
+      <header className="navbar">
+        <span className="navbar-logo">TraqCheck AI</span>
+        <span className="navbar-subtitle">AI-powered candidate onboarding</span>
+      </header>
 
-      {/* Upload */}
-      <section style={{ marginBottom: "2rem" }}>
-        <h2>Upload Resume</h2>
-
-        <input
-          type="file"
-          accept=".pdf,.docx"
-          onChange={handleUpload}
-          disabled={uploading}
-        />
-
-        {uploading && <p>Uploading and parsing...</p>}
-      </section>
-
-      <div
-        style={{
-          display: "flex",
-          gap: "2rem",
-        }}
-      >
-        {/* Candidate list */}
-        <section style={{ flex: 1 }}>
-          <h2>Candidates</h2>
-
-          <table
-            border="1"
-            cellPadding="8"
-            style={{
-              borderCollapse: "collapse",
-              width: "100%",
-            }}
-          >
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Company</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {candidates.map((candidate) => (
-                <tr
-                  key={candidate.id}
-                  onClick={() =>
-                    openCandidate(candidate.id)
-                  }
-                  style={{ cursor: "pointer" }}
-                >
-                  <td>{candidate.name || "-"}</td>
-
-                  <td>{candidate.email || "-"}</td>
-
-                  <td>{candidate.company || "-"}</td>
-
-                  <td>{candidate.status}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="page">
+        <section className="hero">
+          <span className="hero-badge">✦ AI-powered onboarding</span>
+          <h1>
+            <span className="hero-highlight">Candidate</span> Onboarding
+          </h1>
+          <p className="hero-desc">
+            Upload a resume to parse candidate details automatically, then
+            manage document verification from one place.
+          </p>
+          {candidates.length > 0 && (
+            <span className="hero-stat">
+              {candidates.length} candidate{candidates.length === 1 ? "" : "s"}
+            </span>
+          )}
         </section>
 
-        {/* Candidate details */}
-        {selectedCandidate && (
-          <section
-            style={{
-              flex: 1,
-              border: "1px solid #ccc",
-              padding: "1rem",
-            }}
-          >
-            <h2>
-              {selectedCandidate.name || "Unnamed"}
-            </h2>
+        {/* Upload */}
+        <section className="upload-card">
+          <div className="upload-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M12 16V4M12 4L7 9M12 4l5 5M5 20h14"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
 
-            <p>
-              Email: {selectedCandidate.email || "-"}
-            </p>
-
-            <p>
-              Phone: {selectedCandidate.phone || "-"}
-            </p>
-
-            <p>
-              Company: {selectedCandidate.company || "-"}
-            </p>
-
-            <p>
-              Designation:{" "}
-              {selectedCandidate.designation || "-"}
-            </p>
-
-            <p>
-              Status: {selectedCandidate.status}
-            </p>
-
-            <p>
-              Skills:{" "}
-              {(selectedCandidate.skills || []).join(", ")}
-            </p>
-
-            <hr />
-
-            {/* Request documents */}
-            <h3>Documents</h3>
-
-            <button onClick={handleRequestDocs}>
-              Request Documents
-            </button>
-
-            {selectedCandidate.document_request_text && (
-              <p>
-                <em>
-                  {selectedCandidate.document_request_text}
-                </em>
-              </p>
+          <div className="upload-body">
+            <div className="upload-title">Upload Candidate Resume</div>
+            <div className="upload-hint">PDF or DOCX</div>
+            {uploading && (
+              <div className="upload-status">Uploading and parsing…</div>
             )}
+          </div>
 
-            {/* Submit documents */}
-            <h3>Submit Documents</h3>
+          <div className="upload-action">
+            <div className="file-input-wrap">
+              <button className="btn btn-primary" type="button" disabled={uploading}>
+                {uploading ? "Uploading…" : "Choose Resume"}
+              </button>
+              <input
+                type="file"
+                accept=".pdf,.docx"
+                onChange={handleUpload}
+                disabled={uploading}
+                aria-label="Upload candidate resume"
+              />
+            </div>
+          </div>
+        </section>
 
-            <div>
-              <label>
-                PAN:
-                <input
-                  type="file"
-                  onChange={(e) =>
-                    setPanFile(e.target.files[0])
-                  }
-                />
-              </label>
+        <div className="content-grid">
+          {/* Candidate list */}
+          <section className="panel surface-box">
+            <div className="panel-header">
+              <h2>Candidates</h2>
             </div>
 
-            <br />
-
-            <div>
-              <label>
-                Aadhaar:
-                <input
-                  type="file"
-                  onChange={(e) =>
-                    setAadhaarFile(e.target.files[0])
-                  }
-                />
-              </label>
-            </div>
-
-            <br />
-
-            <button onClick={handleSubmitDocs}>
-              Submit Documents
-            </button>
-
-            <ul>
-              {(selectedCandidate.documents || []).map(
-                (document, index) => (
-                  <li key={index}>
-                    {document.type}
-                  </li>
-                )
+            <div className="panel-body">
+              {candidates.length === 0 ? (
+                <div className="empty-state">
+                  <h3>No candidates yet</h3>
+                  <p>Upload a resume to start the onboarding workflow.</p>
+                </div>
+              ) : (
+                candidates.map((candidate) => (
+                  <div
+                    key={candidate.id}
+                    role="button"
+                    tabIndex={0}
+                    className={`candidate-row${
+                      candidate.id === selectedId ? " selected" : ""
+                    }`}
+                    onClick={() => openCandidate(candidate.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        openCandidate(candidate.id);
+                      }
+                    }}
+                  >
+                    <span className="candidate-name">
+                      {candidate.name || "-"}
+                    </span>
+                    <span className="candidate-meta">
+                      {candidate.email || "-"}
+                    </span>
+                    <span className="candidate-meta">
+                      {candidate.company || "-"}
+                    </span>
+                    <StatusBadge status={candidate.status} />
+                  </div>
+                ))
               )}
-            </ul>
+            </div>
           </section>
-        )}
+
+          {/* Candidate details */}
+          {selectedCandidate && (
+            <section className="panel surface-box">
+              <div className="details-section">
+                <div className="details-name">
+                  {selectedCandidate.name || "Unnamed"}
+                </div>
+                {selectedCandidate.designation && (
+                  <div className="details-role">
+                    {selectedCandidate.designation}
+                  </div>
+                )}
+                <div style={{ marginTop: 10 }}>
+                  <StatusBadge status={selectedCandidate.status} />
+                </div>
+              </div>
+
+              <div className="details-section">
+                <h3>Contact</h3>
+                <div className="field-list">
+                  <span className="field-label">Email</span>
+                  <span className="field-value">
+                    {selectedCandidate.email || "-"}
+                  </span>
+                  <span className="field-label">Phone</span>
+                  <span className="field-value">
+                    {selectedCandidate.phone || "-"}
+                  </span>
+                  <span className="field-label">Company</span>
+                  <span className="field-value">
+                    {selectedCandidate.company || "-"}
+                  </span>
+                </div>
+              </div>
+
+              {(selectedCandidate.skills || []).length > 0 && (
+                <div className="details-section">
+                  <h3>Skills</h3>
+                  <div className="skills-wrap">
+                    {selectedCandidate.skills.map((skill, i) => (
+                      <span className="skill-chip" key={i}>
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="details-section">
+                <h3>Document verification</h3>
+
+                <div className="section-actions">
+                  <button className="btn btn-primary" onClick={handleRequestDocs}>
+                    Request Documents
+                  </button>
+                </div>
+
+                {selectedCandidate.document_request_text && (
+                  <div className="doc-request-msg">
+                    {selectedCandidate.document_request_text}
+                  </div>
+                )}
+
+                <div className="doc-uploads">
+                  <div className="doc-upload-box surface-box">
+                    <label htmlFor="pan-upload">PAN</label>
+                    <input
+                      id="pan-upload"
+                      type="file"
+                      onChange={(e) => setPanFile(e.target.files[0])}
+                    />
+                    {panFile && (
+                      <div className="filename">{panFile.name}</div>
+                    )}
+                  </div>
+
+                  <div className="doc-upload-box surface-box">
+                    <label htmlFor="aadhaar-upload">Aadhaar</label>
+                    <input
+                      id="aadhaar-upload"
+                      type="file"
+                      onChange={(e) => setAadhaarFile(e.target.files[0])}
+                    />
+                    {aadhaarFile && (
+                      <div className="filename">{aadhaarFile.name}</div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="section-actions">
+                  <button className="btn btn-secondary" onClick={handleSubmitDocs}>
+                    Submit Documents
+                  </button>
+                </div>
+
+                {(selectedCandidate.documents || []).length > 0 && (
+                  <ul className="doc-list">
+                    {selectedCandidate.documents.map((document, index) => (
+                      <li key={index}>{document.type}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </section>
+          )}
+        </div>
       </div>
     </div>
   );
