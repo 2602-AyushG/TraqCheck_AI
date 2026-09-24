@@ -11,7 +11,7 @@ from parser import extract_text, parse_resume
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)  # allow requests from React dev server (different port = different origin)
+CORS(app)  #  # allow frontend requests
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "uploads") #path to upload folder
 DOCUMENTS_FOLDER = os.path.join(os.path.dirname(__file__), "documents") # path to document file
