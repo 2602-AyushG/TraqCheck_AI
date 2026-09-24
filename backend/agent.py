@@ -43,7 +43,7 @@ def generate_document_request(candidate):
 
     try:
         response = client.chat.completions.create(
-            model="qwen/qwen3-4b:free",
+            model="openai/gpt-oss-20b:free",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.4,
         )
