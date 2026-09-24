@@ -1,4 +1,4 @@
-const BASE_URL = "http://127.0.0.1:5000";
+const BASE_URL = "https://traqcheck-ai.onrender.com";
 export async function uploadResume(file) {
   const formData = new FormData();
   formData.append("resume", file);
