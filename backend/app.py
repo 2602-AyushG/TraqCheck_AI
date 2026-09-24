@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import os
 import json
 import uuid
-from db import get_db
+from db import get_db, init_db
 from parser import extract_text, parse_resume
 
 
@@ -22,6 +22,8 @@ os.makedirs(DOCUMENTS_FOLDER, exist_ok=True)
 # Putting paths into Flask config && This means instead of writing the folder path everywhere later, our routes can simply use:
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["DOCUMENTS_FOLDER"] = DOCUMENTS_FOLDER
+
+init_db()
 
 @app.route("/")
 def health_check():
