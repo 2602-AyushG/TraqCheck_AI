@@ -43,7 +43,7 @@ def generate_document_request(candidate):
 
     try:
         response = client.chat.completions.create(
-            model="inference-net/schematron-v2-turbo",
+            model="qwen/qwen3-4b:free",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.4,
         )
