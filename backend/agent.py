@@ -43,7 +43,7 @@ def generate_document_request(candidate):
 
     try:
         response = client.chat.completions.create(
-            model="openai/gpt-oss-20b:free",
+            model="nvidia/nemotron-3-super-120b-a12b:free",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.4,
         )

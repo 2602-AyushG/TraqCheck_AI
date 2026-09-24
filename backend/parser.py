@@ -50,7 +50,7 @@ Resume text:
 
 def parse_resume(resume_text):
     response = client.chat.completions.create(
-        model="openai/gpt-oss-20b:free",
+        model="nvidia/nemotron-3-super-120b-a12b:free",
         messages=[{"role": "user", "content": EXTRACTION_PROMPT.format(resume_text=resume_text)}],
         temperature=0, #so that llm dont uses creAtivity of its own and stick to the prompt given 
     )
