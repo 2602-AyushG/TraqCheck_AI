@@ -16,6 +16,9 @@ CORS(app)  # allow requests from React dev server (different port = different or
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "uploads") #path to upload folder
 DOCUMENTS_FOLDER = os.path.join(os.path.dirname(__file__), "documents") # path to document file
 
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(DOCUMENTS_FOLDER, exist_ok=True)
+
 # Putting paths into Flask config && This means instead of writing the folder path everywhere later, our routes can simply use:
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["DOCUMENTS_FOLDER"] = DOCUMENTS_FOLDER
