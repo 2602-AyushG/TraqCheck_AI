@@ -1,7 +1,3 @@
-Yep — then let's fix that now. Since the project is already working live, we can make the README submission-ready.
-
-Replace the contents of your **root `README.md`** with this:
-
 ````markdown
 # TraqCheck AI
 
