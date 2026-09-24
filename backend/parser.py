@@ -50,10 +50,13 @@ Resume text:
 
 def parse_resume(resume_text):
     response = client.chat.completions.create(
-        model="nvidia/nemotron-3-ultra-550b-a55b:free",
+        model="openrouter/free",
         messages=[{"role": "user", "content": EXTRACTION_PROMPT.format(resume_text=resume_text)}],
         temperature=0, #so that llm dont uses creAtivity of its own and stick to the prompt given 
     )
+    if response.choices is None:
+        return {"error": "AI service is temporarily unavailable"}
+
     raw = response.choices[0].message.content.strip() # to strip/remove blank spaces if any in start/end
     raw = raw.replace("```json", "").replace("```", "").strip() # replace if json word is there in response(llms do that sometimes)
     try:

@@ -43,7 +43,7 @@ def generate_document_request(candidate):
 
     try:
         response = client.chat.completions.create(
-            model="nvidia/nemotron-3-ultra-550b-a55b:free",
+            model="openrouter/free",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.4,
         )
