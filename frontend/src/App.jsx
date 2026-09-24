@@ -1,122 +1,264 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useState, useEffect } from "react";
+
+import {
+  uploadResume,
+  getCandidates,
+  getCandidate,
+  requestDocuments,
+  submitDocuments,
+} from "./api.js";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [candidates, setCandidates] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
+
+  const [uploading, setUploading] = useState(false);
+
+  const [panFile, setPanFile] = useState(null);
+  const [aadhaarFile, setAadhaarFile] = useState(null);
+
+  const loadCandidates = async () => {
+    const data = await getCandidates();
+    setCandidates(data);
+  };
+
+  useEffect(() => {
+    loadCandidates();
+  }, []);
+
+  // Upload resume
+  const handleUpload = async (e) => {
+    const file = e.target.files[0];
+
+    if (!file) return;
+
+    setUploading(true);
+
+    try {
+      await uploadResume(file);
+      await loadCandidates();
+    } catch (err) {
+      alert("Upload failed: " + err.message);
+    }
+
+    setUploading(false);
+  };
+
+  // Open candidate details
+  const openCandidate = async (id) => {
+    setSelectedId(id);
+
+    const data = await getCandidate(id);
+
+    setSelectedCandidate(data);
+  };
+
+  // Request PAN/Aadhaar
+  const handleRequestDocs = async () => {
+    await requestDocuments(selectedId);
+
+    await openCandidate(selectedId);
+    await loadCandidates();
+  };
+
+  // Submit PAN/Aadhaar
+  const handleSubmitDocs = async () => {
+    if (!panFile && !aadhaarFile) {
+      alert("Select at least one file");
+      return;
+    }
+
+    await submitDocuments(
+      selectedId,
+      panFile,
+      aadhaarFile
+    );
+
+    setPanFile(null);
+    setAadhaarFile(null);
+
+    await openCandidate(selectedId);
+    await loadCandidates();
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
+    <div
+      style={{
+        padding: "2rem",
+        fontFamily: "Arial, sans-serif",
+      }}
+    >
+      <h1>Candidate AI System</h1>
+
+      {/* Upload */}
+      <section style={{ marginBottom: "2rem" }}>
+        <h2>Upload Resume</h2>
+
+        <input
+          type="file"
+          accept=".pdf,.docx"
+          onChange={handleUpload}
+          disabled={uploading}
+        />
+
+        {uploading && <p>Uploading and parsing...</p>}
       </section>
 
-      <div className="ticks"></div>
+      <div
+        style={{
+          display: "flex",
+          gap: "2rem",
+        }}
+      >
+        {/* Candidate list */}
+        <section style={{ flex: 1 }}>
+          <h2>Candidates</h2>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+          <table
+            border="1"
+            cellPadding="8"
+            style={{
+              borderCollapse: "collapse",
+              width: "100%",
+            }}
+          >
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Company</th>
+                <th>Status</th>
+              </tr>
+            </thead>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+            <tbody>
+              {candidates.map((candidate) => (
+                <tr
+                  key={candidate.id}
+                  onClick={() =>
+                    openCandidate(candidate.id)
+                  }
+                  style={{ cursor: "pointer" }}
+                >
+                  <td>{candidate.name || "-"}</td>
+
+                  <td>{candidate.email || "-"}</td>
+
+                  <td>{candidate.company || "-"}</td>
+
+                  <td>{candidate.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+
+        {/* Candidate details */}
+        {selectedCandidate && (
+          <section
+            style={{
+              flex: 1,
+              border: "1px solid #ccc",
+              padding: "1rem",
+            }}
+          >
+            <h2>
+              {selectedCandidate.name || "Unnamed"}
+            </h2>
+
+            <p>
+              Email: {selectedCandidate.email || "-"}
+            </p>
+
+            <p>
+              Phone: {selectedCandidate.phone || "-"}
+            </p>
+
+            <p>
+              Company: {selectedCandidate.company || "-"}
+            </p>
+
+            <p>
+              Designation:{" "}
+              {selectedCandidate.designation || "-"}
+            </p>
+
+            <p>
+              Status: {selectedCandidate.status}
+            </p>
+
+            <p>
+              Skills:{" "}
+              {(selectedCandidate.skills || []).join(", ")}
+            </p>
+
+            <hr />
+
+            {/* Request documents */}
+            <h3>Documents</h3>
+
+            <button onClick={handleRequestDocs}>
+              Request Documents
+            </button>
+
+            {selectedCandidate.document_request_text && (
+              <p>
+                <em>
+                  {selectedCandidate.document_request_text}
+                </em>
+              </p>
+            )}
+
+            {/* Submit documents */}
+            <h3>Submit Documents</h3>
+
+            <div>
+              <label>
+                PAN:
+                <input
+                  type="file"
+                  onChange={(e) =>
+                    setPanFile(e.target.files[0])
+                  }
+                />
+              </label>
+            </div>
+
+            <br />
+
+            <div>
+              <label>
+                Aadhaar:
+                <input
+                  type="file"
+                  onChange={(e) =>
+                    setAadhaarFile(e.target.files[0])
+                  }
+                />
+              </label>
+            </div>
+
+            <br />
+
+            <button onClick={handleSubmitDocs}>
+              Submit Documents
+            </button>
+
+            <ul>
+              {(selectedCandidate.documents || []).map(
+                (document, index) => (
+                  <li key={index}>
+                    {document.type}
+                  </li>
+                )
+              )}
+            </ul>
+          </section>
+        )}
+      </div>
+    </div>
+  );
 }
 
-export default App
+export default App;
