@@ -2,12 +2,15 @@ import os
 from openai import OpenAI
 from dotenv import load_dotenv
 
+
 load_dotenv()
+
 
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=os.getenv("OPENROUTER_API_KEY"),
 )
+
 
 REQUEST_PROMPT = """You are an HR assistant. Write a short, polite email requesting
 identity documents (PAN card and Aadhaar card) from a job candidate.
@@ -25,29 +28,94 @@ Requirements:
 - Sign off as "HR Team"
 """
 
+
 def generate_document_request(candidate):
+
     if not candidate:
-        return {"success": False, "error": "candidate data is missing"}
+        return {
+            "success": False,
+            "error": "candidate data is missing"
+        }
+
     if not candidate.get("name"):
-        return {"success": False, "error": "candidate name is missing"}
-    if not candidate.get("company"):
-        return {"success": False, "error": "company is missing"}
+        return {
+            "success": False,
+            "error": "candidate name is missing"
+        }
+
     if not candidate.get("designation"):
-        return {"success": False, "error": "designation is missing"}
+        return {
+            "success": False,
+            "error": "candidate designation is missing"
+        }
+
+    # Freshers may not have a company.
+    # Use a safe fallback instead of rejecting them.
+    company = candidate.get("company") or "Not provided"
 
     prompt = REQUEST_PROMPT.format(
         name=candidate.get("name"),
-        company=candidate.get("company"),
+        company=company,
         designation=candidate.get("designation"),
     )
 
     try:
+
         response = client.chat.completions.create(
             model="nvidia/nemotron-3-super-120b-a12b:free",
-            messages=[{"role": "user", "content": prompt}],
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
             temperature=0.4,
         )
-    except Exception as e:
-        return {"success": False, "error": f"AI service error: {str(e)}"}
 
-    return {"success": True, "text": response.choices[0].message.content.strip()}
+    except Exception as e:
+
+        return {
+            "success": False,
+            "error": f"AI service error: {str(e)}"
+        }
+
+    # Handle choices=None or an empty choices list
+    if not response.choices:
+
+        return {
+            "success": False,
+            "error": "AI returned no response"
+        }
+
+    # Handle missing message
+    if response.choices[0].message is None:
+
+        return {
+            "success": False,
+            "error": "AI returned an empty response"
+        }
+
+    content = response.choices[0].message.content
+
+    # Handle content=None
+    if content is None:
+
+        return {
+            "success": False,
+            "error": "AI returned an empty response"
+        }
+
+    content = content.strip()
+
+    # Handle empty string
+    if not content:
+
+        return {
+            "success": False,
+            "error": "AI returned an empty response"
+        }
+
+    return {
+        "success": True,
+        "text": content
+    }
