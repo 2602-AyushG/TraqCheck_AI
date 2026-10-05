@@ -1,206 +1,122 @@
-````markdown
 # TraqCheck AI
 
-An AI-powered candidate onboarding system that automates resume parsing, candidate information extraction, document requests, and document submission.
+An AI-powered candidate onboarding system. HR uploads a resume, the system extracts structured candidate details with an LLM, then an AI agent generates a personalized request for PAN and Aadhaar documents, and the candidate's submissions are tracked.
 
-## 🚀 Live Demo
+## Live Demo
 
-**Frontend:**  
-https://traq-check-ai.vercel.app
+- **Frontend:** https://traq-check-ai.vercel.app
+- **Backend API:** https://traqcheck-ai.onrender.com
 
-**Backend API:**  
-https://traqcheck-ai.onrender.com
+> The backend runs on Render's free tier. The first request after inactivity can take 30–60 seconds while the instance wakes up. Data stored on the free instance (SQLite and uploaded files) is **not persistent** and may be reset on restart or redeploy.
 
-## ✨ Features
+## Features
 
-- Upload candidate resumes in PDF or DOCX format
-- Extract resume text automatically
-- Use an LLM to extract structured candidate information
-- Store candidate information in SQLite
-- Display candidates through a React frontend
-- Generate personalized document-request messages using AI
-- Upload PAN and Aadhaar documents
-- Track candidate onboarding status
+- Drag-and-drop resume upload (PDF or DOCX) with upload progress
+- Resume text extraction (pdfplumber, python-docx)
+- LLM-based extraction of name, email, phone, company, designation and skills, with per-field confidence scores
+- Candidate dashboard (name, email, company, extraction status)
+- Candidate profile view showing extracted data and confidence
+- One-click AI-generated, personalized document request (PAN / Aadhaar), stored against the candidate
+- Upload and view submitted PAN / Aadhaar images
+- Status tracking per candidate
 
-## 🏗️ Architecture
+## Architecture
 
 ```text
-                    ┌─────────────────────┐
-                    │   React Frontend    │
-                    │      Vercel         │
-                    └──────────┬──────────┘
-                               │ REST API
-                               ▼
-                    ┌─────────────────────┐
-                    │   Flask Backend     │
-                    │      Render         │
-                    └──────────┬──────────┘
-                               │
-             ┌─────────────────┼─────────────────┐
-             ▼                 ▼                 ▼
-      ┌─────────────┐   ┌─────────────┐   ┌─────────────┐
-      │ PDF/DOCX    │   │   SQLite    │   │ OpenRouter  │
-      │ Extraction  │   │  Database   │   │     LLM     │
-      └─────────────┘   └─────────────┘   └─────────────┘
-````
+                 ┌─────────────────────┐
+                 │   React Frontend    │
+                 │   (Vite, Vercel)    │
+                 └──────────┬──────────┘
+                            │ REST (JSON / multipart)
+                            ▼
+                 ┌─────────────────────┐
+                 │   Flask Backend     │
+                 │      (Render)       │
+                 └──────────┬──────────┘
+                            │
+          ┌─────────────────┼─────────────────┐
+          ▼                 ▼                 ▼
+   ┌─────────────┐   ┌─────────────┐   ┌─────────────┐
+   │ PDF / DOCX  │   │   SQLite    │   │ OpenRouter  │
+   │ text extract│   │  database   │   │  LLM (free) │
+   └─────────────┘   └─────────────┘   └─────────────┘
+```
 
-## 🛠️ Tech Stack
+**Modules (backend):**
 
-### Frontend
+| File | Responsibility |
+|---|---|
+| `app.py` | Flask app, routes, validation, CORS |
+| `parser.py` | Text extraction from PDF/DOCX and LLM-based field extraction |
+| `agent.py` | Generates the personalized PAN/Aadhaar request message |
+| `db.py` | SQLite schema and helpers |
 
-* React.js
-* Vite
-* JavaScript
-* CSS
+## Tech Stack
+
+- **Frontend:** React, Vite, JavaScript, CSS (deployed on Vercel)
+- **Backend:** Python, Flask, Flask-CORS, SQLite (deployed on Render)
+- **AI:** OpenRouter (NVIDIA Nemotron free model) through the OpenAI-compatible Python SDK. The agent is a custom prompt-driven pipeline; LangChain is not used.
+- **Document processing:** pdfplumber, python-docx
+
+## Workflow
+
+1. **Upload:** HR uploads a PDF/DOCX resume.
+2. **Extract:** text is pulled from the file and sent to the LLM, which returns structured JSON (name, email, phone, company, designation, skills, confidence).
+3. **Store:** the candidate is saved in SQLite with status `parsed`.
+4. **Request documents:** the agent writes a personalized message asking for PAN and Aadhaar. The message is stored and logged against the candidate. It is **not** actually sent by email or SMS.
+5. **Submit documents:** PAN and/or Aadhaar images are uploaded and the candidate's status is updated to `documents_submitted`.
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/` | Health check |
+| POST | `/candidates/upload` | Upload and parse a resume (multipart, field name: `file`) |
+| GET | `/candidates` | List all candidates |
+| GET | `/candidates/<id>` | Parsed profile with extracted data |
+| POST | `/candidates/<id>/request-documents` | Generate and log an AI document request |
+| POST | `/candidates/<id>/submit-documents` | Upload PAN and/or Aadhaar images |
+
+## Local Setup
 
 ### Backend
 
-* Python
-* Flask
-* Flask-CORS
-* SQLite
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
-### AI
+Create `backend/.env`:
 
-* OpenRouter
-* NVIDIA Nemotron 3 Super
-* OpenAI-compatible Python SDK
+```env
+OPENROUTER_API_KEY=your_api_key_here
+```
 
-### Document Processing
+Initialize the database and run:
 
-* pdfplumber
-* python-docx
+```bash
+python db.py
+python app.py
+```
 
-### Deployment
+Backend runs at `http://127.0.0.1:5000`.
 
-* Vercel — Frontend
-* Render — Backend
+### Frontend
 
-## 🔄 Workflow
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-### 1. Resume Upload
+Frontend runs at `http://localhost:5173`. Set the backend URL in the frontend environment/config (see `frontend/src/api.js`).
 
-A recruiter uploads a candidate's PDF or DOCX resume.
+## Project Structure
 
 ```text
-Resume
-   ↓
-File Upload
-   ↓
-Text Extraction
-   ↓
-LLM Processing
-   ↓
-Structured Candidate Data
-```
-
-The system extracts:
-
-* Name
-* Email
-* Phone
-* Company
-* Designation
-* Skills
-* Extraction confidence
-
-### 2. Candidate Storage
-
-The extracted information is stored in SQLite.
-
-Each candidate receives a unique ID and an onboarding status.
-
-Example:
-
-```json
-{
-  "name": "AYUSH GUPTA",
-  "email": "ayushg2602@gmail.com",
-  "company": "Oracle",
-  "designation": "Software Developer Intern",
-  "status": "parsed"
-}
-```
-
-### 3. Document Request
-
-The recruiter can request onboarding documents.
-
-The AI generates a personalized request containing the required documents such as:
-
-* PAN card
-* Aadhaar card
-
-The generated request is stored against the candidate.
-
-### 4. Document Submission
-
-The candidate can upload:
-
-* PAN
-* Aadhaar
-
-The submitted document metadata is stored and the candidate status is updated to:
-
-```text
-documents_submitted
-```
-
-## 📡 API Endpoints
-
-### Health Check
-
-```http
-GET /
-```
-
-Checks whether the backend is running.
-
-### Upload Resume
-
-```http
-POST /candidates/upload
-```
-
-Uploads and parses a PDF/DOCX resume.
-
-### List Candidates
-
-```http
-GET /candidates
-```
-
-Returns all candidates.
-
-### Get Candidate
-
-```http
-GET /candidates/<candidate_id>
-```
-
-Returns detailed candidate information.
-
-### Request Documents
-
-```http
-POST /candidates/<candidate_id>/request-documents
-```
-
-Generates an AI-powered document request.
-
-### Submit Documents
-
-```http
-POST /candidates/<candidate_id>/submit-documents
-```
-
-Uploads PAN and/or Aadhaar documents.
-
-## 📁 Project Structure
-
-```text
-candidate-ai-system/
-│
+TraqCheck_AI/
 ├── backend/
 │   ├── app.py
 │   ├── agent.py
@@ -209,7 +125,6 @@ candidate-ai-system/
 │   ├── requirements.txt
 │   ├── uploads/
 │   └── documents/
-│
 ├── frontend/
 │   ├── src/
 │   │   ├── App.jsx
@@ -219,115 +134,40 @@ candidate-ai-system/
 │   │   └── main.jsx
 │   ├── package.json
 │   └── vite.config.js
-│
 ├── .gitignore
 └── README.md
 ```
 
-## ⚙️ Local Setup
+## Design Decisions
 
-### Backend
+- **Flask + SQLite:** minimal setup for a time-boxed assignment; schema is simple and easy to migrate to PostgreSQL.
+- **OpenRouter free model:** the assignment allowed any free model. Trade-off: free models can be slow or rate-limited.
+- **Custom agent instead of LangChain:** the agent's job is a single, well-defined generation step, so a direct SDK call keeps the code small and easy to debug.
+- **Request is logged, not sent:** matches the brief ("generates and logs"). Real delivery would plug in an email/WhatsApp provider.
 
-```bash
-cd backend
+## Known Limitations
 
-python3 -m venv venv312
-source venv312/bin/activate
+- **No authentication or authorization.** Candidate IDs are sequential and endpoints are open, so anyone with the URL can access candidate data and uploaded documents. This is not acceptable for real PAN/Aadhaar data.
+- **PAN/Aadhaar are stored as plain uploaded files** with no encryption, masking, or retention policy.
+- **No OCR or validation of the uploaded documents.** The system does not check that a file is actually a PAN or Aadhaar card, nor validate number formats.
+- **Scanned / image-only resumes are not supported** (no OCR). Text in DOCX headers, tables or text boxes may be missed.
+- **Confidence scores come from the LLM's output** and are indicative, not calibrated.
+- **Free-tier hosting:** SQLite and uploaded files are ephemeral on Render; cold starts are slow.
+- **LLM calls are synchronous**, so a slow or rate-limited model slows the upload request.
+- No pagination or search on the candidate list.
 
-pip install -r requirements.txt
-```
+## Future Improvements
 
-Create a `.env` file:
+- PostgreSQL and persistent object storage (S3 or similar)
+- Authentication, role-based access, signed document URLs, encryption at rest
+- Actual delivery of document requests via email/WhatsApp
+- Background job queue for parsing
+- OCR for scanned resumes and document verification (PAN/Aadhaar format and card detection)
+- Duplicate detection, pagination and search
+- Prompt-injection hardening for resume content
+- Audit logging and monitoring
 
-```env
-OPENROUTER_API_KEY=your_api_key_here
-```
-
-Initialize the database:
-
-```bash
-python db.py
-```
-
-Run the backend:
-
-```bash
-python app.py
-```
-
-Backend will run at:
-
-```text
-http://127.0.0.1:5000
-```
-
-### Frontend
-
-Open another terminal:
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Frontend will run at:
-
-```text
-http://localhost:5173
-```
-
-## 🔐 Environment Variables
-
-The backend requires:
-
-```env
-OPENROUTER_API_KEY=your_api_key_here
-```
-
-The API key should never be committed to GitHub.
-
-## 📌 Current Limitations
-
-* SQLite is used for simplicity and demonstration purposes.
-* The Render free instance may take some time to wake up after inactivity.
-* Uploaded files and SQLite data on the free Render filesystem are not suitable for production-grade persistent storage.
-* Production deployment would use persistent object storage and a managed database.
-* Authentication and role-based access control are not currently implemented.
-
-## 🔮 Future Improvements
-
-* PostgreSQL or another managed database
-* Persistent object storage for candidate documents
-* Authentication and role-based access control
-* Candidate search and filtering
-* Resume scoring and job-description matching
-* Automated email delivery
-* Document verification
-* Audit logging
-* Production-grade monitoring
-
-## 👨‍💻 Author
+## Author
 
 **Ayush Gupta**
-
-B.Tech — Software Engineering
-Delhi Technological University
-
----
-
-Built as an AI-powered candidate onboarding workflow combining document processing, LLM-based extraction, REST APIs, and cloud deployment.
-
-````
-
-### Then save and push
-
-From your project root:
-
-```bash
-git add README.md
-git commit -m "Add project documentation"
-git push origin main
-````
-
-**No Render redeployment is needed for a README-only change.** Your live application will remain exactly as it is.
+B.Tech, Delhi Technological University
