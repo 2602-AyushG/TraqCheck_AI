@@ -33,3 +33,6 @@ truststore==0.10.4
 typing-inspection==0.4.4
 typing_extensions==4.16.0
 Werkzeug==3.1.8
+PyMuPDF==1.28.2
+Pillow==12.3.0
+pytesseract==0.3.13
