@@ -2,6 +2,10 @@ import json
 import os
 import pdfplumber
 import docx
+import fitz
+import pytesseract
+from PIL import Image
+import io
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -24,16 +28,53 @@ def extract_text(file_path):
                 if page_text:
                     text += page_text + "\n"
 
+        # OCR fallback for scanned/image-based PDFs
+        if not text.strip():
+
+            doc = fitz.open(file_path)
+
+            for page in doc:
+
+                pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+
+                image = Image.open(
+                    io.BytesIO(
+                        pix.tobytes("png")
+                    )
+                )
+
+                ocr_text = pytesseract.image_to_string(image)
+
+                if ocr_text.strip():
+                    text += ocr_text + "\n"
+
+            doc.close()
+
         return text
 
     elif file_path.lower().endswith(".docx"):
 
         doc = docx.Document(file_path)
+        text_parts = []
 
-        return "\n".join(
-            p.text
-            for p in doc.paragraphs
-        )
+        # Extract normal paragraphs
+        for p in doc.paragraphs:
+            if p.text.strip():
+                text_parts.append(p.text)
+
+    # Extract text from tables
+        for table in doc.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    cell_text = cell.text.strip()
+                    if cell_text:
+                        text_parts.append(cell_text)
+
+        return "\n".join(text_parts)
+        # return "\n".join(
+        #     p.text
+        #     for p in doc.paragraphs
+        # )
 
     else:
 
@@ -136,6 +177,9 @@ def parse_resume(resume_text):
                 return {
                     "error": "AI returned invalid structured data"
                 }
+
+            if isinstance(result.get("name"), str):
+                result["name"] = result["name"].title()
 
             return result
 
