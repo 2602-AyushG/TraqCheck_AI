@@ -23,10 +23,92 @@ def extract_text(file_path):
 
             for page in pdf.pages:
 
-                page_text = page.extract_text()
+                words = page.extract_words()
 
-                if page_text:
-                    text += page_text + "\n"
+                if not words:
+                    continue
+
+                # Find the largest horizontal gap between words.
+                # A large gap can indicate two separate columns.
+                x_positions = sorted(
+                    set(round(word["x0"], 1) for word in words)
+                )
+
+                split_x = None
+                largest_gap = 0
+
+                for i in range(1, len(x_positions)):
+
+                    gap = x_positions[i] - x_positions[i - 1]
+
+                    if gap > largest_gap:
+                        largest_gap = gap
+                        split_x = (
+                            x_positions[i] + x_positions[i - 1]
+                        ) / 2
+
+                # Detect a possible two-column layout
+                is_two_column = (
+                    split_x is not None
+                    and largest_gap > page.width * 0.12
+                )
+
+                if is_two_column:
+
+                    left_words = [
+                        word
+                        for word in words
+                        if word["x0"] < split_x
+                    ]
+
+                    right_words = [
+                        word
+                        for word in words
+                        if word["x0"] >= split_x
+                    ]
+
+                    # Make sure both sides contain meaningful
+                    # amounts of text before treating it as
+                    # a two-column page.
+                    if (
+                        len(left_words) >= len(words) * 0.20
+                        and len(right_words) >= len(words) * 0.20
+                    ):
+
+                        left_text = " ".join(
+                            word["text"]
+                            for word in sorted(
+                                left_words,
+                                key=lambda w: (w["top"], w["x0"])
+                            )
+                        )
+
+                        right_text = " ".join(
+                            word["text"]
+                            for word in sorted(
+                                right_words,
+                                key=lambda w: (w["top"], w["x0"])
+                            )
+                        )
+
+                        text += left_text + "\n"
+                        text += right_text + "\n"
+
+                    else:
+
+                        # Fall back to normal extraction
+                        page_text = page.extract_text()
+
+                        if page_text:
+                            text += page_text + "\n"
+
+                else:
+
+                    # Normal one-column PDF
+                    page_text = page.extract_text()
+
+                    if page_text:
+                        text += page_text + "\n"
 
         # OCR fallback for scanned/image-based PDFs
         if not text.strip():
@@ -35,7 +117,9 @@ def extract_text(file_path):
 
             for page in doc:
 
-                pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+                pix = page.get_pixmap(
+                    matrix=fitz.Matrix(2, 2)
+                )
 
                 image = Image.open(
                     io.BytesIO(
@@ -55,26 +139,28 @@ def extract_text(file_path):
     elif file_path.lower().endswith(".docx"):
 
         doc = docx.Document(file_path)
+
         text_parts = []
 
         # Extract normal paragraphs
         for p in doc.paragraphs:
+
             if p.text.strip():
                 text_parts.append(p.text)
 
-    # Extract text from tables
+        # Extract text from tables
         for table in doc.tables:
+
             for row in table.rows:
+
                 for cell in row.cells:
+
                     cell_text = cell.text.strip()
+
                     if cell_text:
                         text_parts.append(cell_text)
 
         return "\n".join(text_parts)
-        # return "\n".join(
-        #     p.text
-        #     for p in doc.paragraphs
-        # )
 
     else:
 
